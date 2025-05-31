@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta charset="utf-8" />
-        <title>HTML在线加密</title>
+        <title>StatiCrypt: Password protect static HTML</title>
         <meta name="description" content="" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link
@@ -51,7 +51,85 @@
             <div class="row">
                 <div class="col-xs-12">
                     <h1>
-                        html在线加密
+                        StatiCrypt
+                        <div class="pull-right">
+                            <iframe
+                                src="https://ghbtns.com/github-btn.html?user=robinmoisson&repo=staticrypt&type=star&size=large"
+                                frameborder="0"
+                                scrolling="0"
+                                width="80px"
+                                height="30px"
+                            ></iframe>
+                            <iframe
+                                src="https://ghbtns.com/github-btn.html?user=robinmoisson&repo=staticrypt&type=fork&size=large"
+                                frameborder="0"
+                                scrolling="0"
+                                width="80px"
+                                height="30px"
+                            ></iframe>
+                        </div>
+                        <br />
+                        <small>Password protect a static HTML page</small>
+                    </h1>
+                    <p>
+                        StatiCrypt uses AES-256 with WebCrypto to encrypt your html string with your long password, in
+                        your browser (client side).
+                    </p>
+                    <p>
+                        Download your encrypted string in a HTML page with a password prompt you can upload anywhere
+                        (see <a target="_blank" href="example/encrypted/example.html">example</a>).
+                    </p>
+                    <p>
+                        The tool is also available as
+                        <a href="https://npmjs.com/package/staticrypt">a CLI on NPM</a> and is
+                        <a href="https://github.com/robinmoisson/staticrypt">open source on GitHub</a>.
+                    </p>
+                    <br />
+
+                    <h4>
+                        <a class="no-style" id="toggle-concept" href="#">
+                            <span id="toggle-concept-sign">►</span> HOW IT WORKS
+                        </a>
+                    </h4>
+                    <div id="concept" class="hidden">
+                        <p>
+                            <b class="text-danger">Disclaimer</b> if you are an at-risk activist, or have extra
+                            sensitive banking data, you should probably use something else!
+                        </p>
+                        <p>
+                            StatiCrypt generates a static, password protected page that can be decrypted in-browser:
+                            just send or upload the generated page to a place serving static content (github pages, for
+                            example) and you're done: the javascript will prompt users for password, decrypt the page
+                            and load your HTML.
+                        </p>
+                        <p>
+                            The page is encrypted with AES-256 in CBC mode (see why this mode is appropriate for
+                            StatiCrypt in
+                            <a href="https://github.com/robinmoisson/staticrypt/issues/19">#19</a>). The password is
+                            hashed with PBKDF2 (599k iterations with SHA-256, plus 1k with SHA-1 for legacy reasons (see
+                            <a href="https://github.com/robinmoisson/staticrypt/issues/159">#159</a>), for the added
+                            <a
+                                href="https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html#pbkdf2"
+                                >recommended total</a
+                            >
+                            of 600k) and used to encrypt the page.
+                        </p>
+                        <p>
+                            It basically encrypts your page and puts everything with a user-friendly way to use a
+                            password in the new file. AES-256 is state of the art but
+                            <b
+                                >brute-force/dictionary attacks would be easy to do at a really fast pace: use a long,
+                                unusual password!</b
+                            >
+                            <br />
+                            => To be safe, we recommend 16+ alphanum characters, and using a password manager like the
+                            open-source <a href="http://bitwarden.com">Bitwarden</a>.
+                        </p>
+                        <p>
+                            Feel free to contribute or report any thought to the
+                            <a href="https://github.com/robinmoisson/staticrypt">GitHub project</a>.
+                        </p>
+                    </div>
                     <br />
                 </div>
             </div>
@@ -59,21 +137,21 @@
                 <div class="col-xs-12">
                     <form id="encrypt_form">
                         <div class="form-group">
-                            <label for="password">密码</label>
+                            <label for="password">Password</label>
                             <input
-                                type="密码"
+                                type="password"
                                 class="form-control"
                                 id="password"
-                                placeholder="在此输入你的密码"
+                                placeholder="Password (choose a long one!)"
                             />
                         </div>
 
                         <div class="form-group">
-                            <label for="unencrypted_html">要加密的 HTML 代码</label>
+                            <label for="unencrypted_html">HTML/string to encrypt</label>
                             <textarea
                                 class="form-control"
                                 id="unencrypted_html"
-                                placeholder="在此输入你的网页代码"
+                                placeholder="<html><head>..."
                                 rows="5"
                             ></textarea>
                         </div>
@@ -81,7 +159,8 @@
                         <div class="form-group">
                             <label class="no-style">
                                 <input type="checkbox" id="remember" checked />
-                                勾选开启 记住密码 选项
+                                Add "Remember me" checkbox (append <code>#staticrypt_logout</code> to your URL to
+                                logout)
                                 <small>
                                     <abbr
                                         class="text-muted"
@@ -94,95 +173,96 @@
                         </div>
 
                         <p>
-                            <a href="#" id="toggle-extra-option">+ 其他选项设置</a>
+                            <a href="#" id="toggle-extra-option">+ More options</a>
                         </p>
                         <div id="extra-options" class="hidden">
                             <div class="form-group">
-                                <label for="template_title">加密后的网页标题</label>
+                                <label for="template_title">Page title</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_title"
-                                    placeholder="标题"
+                                    placeholder="Default: 'Protected Page'"
                                 />
                             </div>
 
                             <div class="form-group">
-                                <label for="template_instructions">显示用户的说明</label>
+                                <label for="template_instructions">Instructions to display the user</label>
                                 <textarea
                                     class="form-control"
                                     id="template_instructions"
-                                    placeholder="登录框说明"
+                                    placeholder="Default: nothing."
                                 ></textarea>
                             </div>
 
                             <div class="form-group">
-                                <label for="登录密码</label>
+                                <label for="template_placeholder">Password input placeholder</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_placeholder"
-                                    placeholder="在此输入密码"
+                                    placeholder="Default: 'Password'"
                                 />
                             </div>
 
                             <div class="form-group">
-                                <label for="记住我 勾选框标签</label>
+                                <label for="template_remember">"Remember me" checkbox label</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_remember"
-                                    placeholder="记住我"
+                                    placeholder="Default: 'Remember me'"
                                 />
                             </div>
 
                             <div class="form-group">
-                                <label for="remember_in_days">"“记住我”的有效期（天数）</label>
+                                <label for="remember_in_days">"Remember me" expiration in days</label>
                                 <input
                                     type="number"
                                     class="form-control"
                                     id="remember_in_days"
                                     step="any"
-                                    placeholder=" 默认值：0（无到期日） "
+                                    placeholder="Default: 0 (no expiration)"
                                 />
                                 <small class="form-text text-muted">
-                                    过了设置的天数，用户必须再次输入密码，留空或设置为0表示没有过期。
+                                    After this many days, the user will have to enter the password again. Leave empty or
+                                    set to 0 for no expiration.
                                 </small>
                             </div>
 
                             <div class="form-group">
-                                <label for="登录按钮标签</label>
+                                <label for="template_button">Decrypt button label</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_button"
-                                    placeholder="登录"
+                                    placeholder="Default: 'DECRYPT'"
                                 />
                             </div>
 
                             <div class="form-group">
-                                <label for="登录按钮颜色</label>
+                                <label for="template_color_primary">Primary color (button, ...)</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_color_primary"
-                                    placeholder="默认: '#4CAF50'"
+                                    placeholder="Default: '#4CAF50'"
                                 />
                             </div>
 
                             <div class="form-group">
-                                <label for="加密页背景颜色</label>
+                                <label for="template_color_secondary">Secondary color (background, ...)</label>
                                 <input
                                     type="text"
                                     class="form-control"
                                     id="template_color_secondary"
-                                    placeholder="默认: '#76B852'"
+                                    placeholder="Default: '#76B852'"
                                 />
                             </div>
                         </div>
 
                         <button class="btn btn-primary pull-right" type="submit">
-                            生成加密
+                            Generate password protected HTML
                         </button>
                     </form>
                 </div>
@@ -190,25 +270,27 @@
 
             <div class="row mb-5">
                 <div class="col-xs-12">
-                    <h2>加密 HTML</h2>
+                    <h2>Encrypted HTML</h2>
                     <p>
                         <a
                             class="btn btn-success download"
                             download="encrypted.html"
                             id="download-link"
                             disabled="disabled"
-                            >下载加密后的HTML文件</a
+                            >Download html file with password prompt</a
                         >
                     </p>
-                    <pre id="encrypted_html_display">你的加密字符串</pre>
+                    <pre id="encrypted_html_display">Your encrypted string</pre>
                 </div>
             </div>
         </div>
 
         <div class="footer">
-            感谢您使用 HTML在线加密 - 希望你喜欢这个工具
+            Thank you for using StatiCrypt - I hope you like the tool!
             <br />
-            其他项目 <a href="https://translateabook.com" target="_blank"> 书本翻译.
+            If you'd like to support it you can
+            <a href="https://github.com/sponsors/robinmoisson" target="_blank">sponsor me on github</a>, or check-out my
+            other project to <a href="https://translateabook.com" target="_blank">Translate a Book</a> with LLMs.
         </div>
 
         <script id="cryptoEngine">
