@@ -11,5 +11,5 @@ html加密： ([https://appxzm.github.io/](https://appxzm.github.io/)).
 - `example/` - 示例加密文件，在公开网站中用作示例并进行手工测试。
 - `lib/` - 通过www和cli共享的文件。
 - `scripts/` - 用于构建项目的方便脚本。
-- `index.html` - 托管于https://robinmoisson.github.io/staticrypt的浏览器内加密站点的根目录。保存在repo的根目录中，以便于部署到GitHub页面。
+- `index.html` - 托管于 https://appxzm.github.io 的浏览器内加密站点的根目录。保存在repo的根目录中，以便于部署到GitHub页面。
 
