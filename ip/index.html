@@ -1,1 +1,51 @@
-1
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cloudflare IP 保活</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Cloudflare IP 保活</h1>
+        </header>
+
+        <div class="card progress-section">
+            <progress id="progressBar" value="0" max="100"></progress>
+            <div id="status">正在初始化...</div>
+        </div>
+
+        <div class="card results-section" id="liveResultsSection" style="display:none;">
+            <div class="section-header">
+                <h2>实时测速结果</h2>
+                <div class="generator-info" id="liveGeneratorInfo"></div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table id="resultsTable">
+                    <thead>
+                        <tr>
+                            <th>排名</th>
+                            <th>IP</th>
+                            <th>端口</th>
+                            <th>延迟(ms)</th>
+                            <th>归属地</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+        
+    </div>
+
+    <div id="notificationTooltip" class="tooltip-notification"></div>
+    <div id="qrcodePopup"><canvas id="qrcodeCanvas"></canvas></div>
+
+    <!-- QRCode.js 库将内联在 script.js 的开头 -->
+    <script src="script.js"></script>
+</body>
+</html>
