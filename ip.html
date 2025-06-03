@@ -1,0 +1,53 @@
+!DOCTYPE html
+html lang=zh-CN
+head
+    meta charset=UTF-8
+    meta name=viewport content=width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no
+    titleCloudflare IP 优选器 (纯前端版)title
+    link href=httpsfonts.googleapis.comcss2family=Interwght@400;500;600;700&family=Noto+Sans+SCwght@400;500;700&family=Roboto+Monowght@400;500&display=swap rel=stylesheet
+    link rel=stylesheet href=style.css
+head
+body
+    div class=app-container
+        header
+            h1Cloudflare IP 优选器h1
+            p客户端直接测试 Cloudflare IP (尝试 HTTP 80 端口) 的延迟和连接性。p
+        header
+
+        div class=card progress-section
+            progress id=progressBar value=0 max=100progress
+            div id=status正在初始化...div
+        div
+
+        div class=card results-section id=liveResultsSection style=displaynone;
+            div class=section-header
+                h2实时测速结果h2
+                div class=generator-info id=liveGeneratorInfodiv
+            div
+            div style=overflow-xauto;
+                table id=resultsTable
+                    thead
+                        tr
+                            th排名th
+                            thIPth
+                            th端口th
+                            th延迟(ms)th
+                            th归属地th
+                            th操作th
+                        tr
+                    thead
+                    tbodytbody
+                table
+            div
+        div
+        
+        div
+    div
+
+    div id=notificationTooltip class=tooltip-notificationdiv
+    div id=qrcodePopupcanvas id=qrcodeCanvascanvasdiv
+
+    script src=qrcode.min.jsscript 
+    script src=script.jsscript
+body
+html
