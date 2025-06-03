@@ -3,37 +3,35 @@ var QRCode;!function(){function t(t){this.mode=e.MODE_8BIT_BYTE,this.data=t,this
 
 // Main Application Script
 document.addEventListener('DOMContentLoaded', async () => {
-    const hardcodedCidrList = ["104.16.0.0/24", "104.16.1.0/24", "104.16.2.0/24", "104.16.3.0/24", "104.16.4.0/24"];
-    // // To load from ipv4.txt (make sure ipv4.txt is in the root)
-    // let hardcodedCidrList = [];
+    let hardcodedCidrList = ["104.16.0.0/24", "104.16.1.0/24", "104.16.2.0/24", "104.16.3.0/24", "104.16.4.0/24"]; // Default/fallback
+    
+    // Uncomment to attempt loading from ipv4.txt
     // try {
-    //     const response = await fetch('ipv4.txt'); // Relative path to root
+    //     const response = await fetch('ipv4.txt'); 
     //     if (response.ok) {
     //         const text = await response.text();
-    //         hardcodedCidrList = text.split('\\n').map(line => line.trim()).filter(line => line);
-    //         if (hardcodedCidrList.length === 0) {
+    //         const lines = text.split('\\n').map(line => line.trim()).filter(line => line);
+    //         if (lines.length > 0) {
+    //             hardcodedCidrList = lines;
+    //         } else {
     //            statusDiv.textContent = '警告：ipv4.txt 为空或格式不正确。将使用内置列表。';
-    //            hardcodedCidrList = ["104.16.0.0/24", "104.16.1.0/24"]; // Fallback
     //         }
     //     } else {
-    //         console.error('无法加载 ipv4.txt, status:', response.status);
-    //         statusDiv.textContent = '错误：无法加载IP列表文件。将使用内置列表。';
-    //         hardcodedCidrList = ["104.16.0.0/24", "104.16.1.0/24"]; // Fallback
+    //         console.warn('无法加载 ipv4.txt, status:', response.status, '. 将使用内置列表.');
+    //         // statusDiv is not yet defined here, so log to console or set a flag
     //     }
     // } catch (error) {
-    //     console.error('加载 ipv4.txt 出错:', error);
-    //     statusDiv.textContent = '错误：加载IP列表文件时出错。将使用内置列表。';
-    //     hardcodedCidrList = ["104.16.0.0/24", "104.16.1.0/24"]; // Fallback
+    //     console.warn('加载 ipv4.txt 出错:', error, '. 将使用内置列表.');
     // }
 
 
-    const CLIENT_REQUEST_TIMEOUT = 2500;
-    const CONCURRENT_LIMIT = navigator.hardwareConcurrency ? Math.min(8, navigator.hardwareConcurrency * 2) : 4;
+    const CLIENT_REQUEST_TIMEOUT = 3000; // Increased timeout slightly
+    const CONCURRENT_LIMIT = navigator.hardwareConcurrency ? Math.min(6, navigator.hardwareConcurrency) : 3; // Reduced concurrency further
     const TOP_N_RESULTS = 15;
-    const SAMPLE_SIZE = 500;
-    const PORT_TO_DISPLAY = 443;
-    const PORT_TO_TEST_ACTUAL = 80;
-    const PING_TARGET_PATH = '/cdn-cgi/trace'; // More likely to have permissive CORS
+    const SAMPLE_SIZE = 200; // Reduced sample size
+    const PORT_TO_DISPLAY = 443; 
+    const PORT_TO_TEST_ACTUAL = 443; // Changed to 443 for HTTPS
+    const PING_TARGET_PATH = '/cdn-cgi/trace'; 
 
     const progressBar = document.getElementById('progressBar');
     const statusDiv = document.getElementById('status');
@@ -85,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!isValidIP(range)) return [];
             
             const bits = parseInt(bitsStr, 10);
-            if (isNaN(bits) || bits < 0 || bits > 32) { // Allow single IP if no /xx
+            if (isNaN(bits) || bits < 0 || bits > 32) {
                  if (!bitsStr && isValidIP(range)) return [range];
                  return [];
             }
@@ -97,14 +95,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ips = [];
             if (bits === 32) {
                 ips.push(longToIp(startIpLong));
-            } else if (bits === 31) {
+            } else if (bits === 31) { // Typically not used for host ranges but technically valid
                 ips.push(longToIp(startIpLong));
                 ips.push(longToIp(startIpLong + 1));
             } else {
                 const numHosts = (1 << (32 - bits));
+                if (numHosts <= 2) return []; // No usable host IPs in /31 or /32 (handled above for /32)
                 const broadcastAddrLong = (startIpLong + numHosts - 1) >>> 0;
-                // Only add usable host IPs (not network or broadcast)
-                for (let i = startIpLong + 1; i < broadcastAddrLong; i++) {
+                for (let i = startIpLong + 1; i < broadcastAddrLong; i++) { // Exclude network & broadcast
                     ips.push(longToIp(i >>> 0));
                 }
             }
@@ -119,26 +117,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), CLIENT_REQUEST_TIMEOUT);
         const startTime = Date.now();
-        const targetUrl = `http://${ip}:${PORT_TO_TEST_ACTUAL}${PING_TARGET_PATH}`;
+        const targetUrl = `https://${ip}:${PORT_TO_TEST_ACTUAL}${PING_TARGET_PATH}`; // HTTPS
 
         try {
             const response = await fetch(targetUrl, {
                 method: 'GET', 
                 signal: controller.signal,
                 mode: 'cors', 
-                cache: 'no-store'
+                cache: 'no-store',
+                // It might be necessary to handle self-signed or IP-based cert issues
+                // but browsers generally don't allow bypassing this in fetch for security.
+                // redirect: 'follow' // Default, but explicit
             });
             clearTimeout(timeoutId);
             const endTime = Date.now();
             const rtt = endTime - startTime;
 
-            if (response.ok || (response.status >= 200 && response.status < 400) ) {
+            // For HTTPS, response.ok is a good indicator.
+            // /cdn-cgi/trace should return 200 OK.
+            if (response.ok) { 
                 return { ip, port: PORT_TO_TEST_ACTUAL, rtt: rtt + Math.floor(Math.random() * (199 - 101 + 1)) + 101, error: null };
             } else {
-                 // Even with CORS errors, if a response (any status) comes back, it's technically reachable.
-                 // But for "good" pings, we might only want 2xx. This is a compromise.
-                 // If mode was 'no-cors', response.ok would be false and status 0 for opaque responses.
-                return { ip, port: PORT_TO_TEST_ACTUAL, rtt: Infinity, error: `HTTP ${response.status}` };
+                return { ip, port: PORT_TO_TEST_ACTUAL, rtt: Infinity, error: `HTTPS ${response.status}` };
             }
 
         } catch (error) {
@@ -147,7 +147,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error.name === 'AbortError') {
                 errorType = '超时';
             } else if (error.message && error.message.toLowerCase().includes('failed to fetch')) {
-                errorType = '连接失败'; // Covers network errors & CORS preflight failures
+                // This can be DNS, Network, CORS, or SSL/TLS errors for HTTPS
+                errorType = '连接失败(S)'; 
+            } else if (error.message && error.message.toLowerCase().includes('ssl')) {
+                errorType = 'SSL错误';
             }
             return { ip, port: PORT_TO_TEST_ACTUAL, rtt: Infinity, error: errorType };
         }
@@ -156,21 +159,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function getGeoLocation(ip) {
         let countryCode = null;
         try {
-            const r_ipinfo = await fetch(`https://api.ipgeolocation.io/ipgeo?apiKey=YOUR_API_KEY&ip=${ip}`); // Replace YOUR_API_KEY or use a free one like ipinfo
-            // Using ipinfo.io directly as it's simpler for demo, but has low free limits
-            // const r_ipinfo = await fetch(`https://ipinfo.io/${ip}/json?token=YOUR_IPINFO_TOKEN`); // Add your token if you have one
             const r_ipinfo_direct = await fetch(`https://ipinfo.io/${ip}/country`);
-
-
             if (r_ipinfo_direct.ok) {
                 const text = await r_ipinfo_direct.text();
-                countryCode = text.trim(); // ipinfo.io/country returns 2-letter code directly
+                countryCode = text.trim();
+                if (countryCode.length !== 2) countryCode = null; // Basic validation
             }
         } catch (e) { /*Primary API failed*/ }
 
-        if (!countryCode) { // Fallback if primary failed or no country code
+        if (!countryCode) { 
             try {
-                await new Promise(s => setTimeout(s, 100 + Math.random() * 50)); // Small delay
+                await new Promise(s => setTimeout(s, 150 + Math.random() * 100)); 
                 const r_ipapi = await fetch(`https://ip-api.com/json/${ip}?fields=status,countryCode`);
                 if (r_ipapi.ok) {
                     const d_ipapi = await r_ipapi.json();
@@ -196,7 +195,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const results = resultsData || [];
 
         if (results.length === 0) {
-            statusDiv.textContent = '没有找到可用的IP。';
+            // This part is handled by the final status update in startIpTestProcess
+            // statusDiv.textContent = '没有找到可用的IP。'; 
             liveResultsSection.style.display = 'none';
             return;
         }
@@ -335,15 +335,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function startIpTestProcess() {
-        statusDiv.textContent = '准备解析内置IP列表...';
+        // Attempt to load ipv4.txt if the relevant code block is uncommented
+        // This needs to be done carefully as DOM elements might not be fully ready if this is too early.
+        // For simplicity, keeping the hardcodedCidrList logic as primary for now or ensure it's loaded before this function runs.
+        // If ipv4.txt loading is enabled, ensure `hardcodedCidrList` is populated before this line.
+
+        statusDiv.textContent = '准备解析IP列表...';
         progressBar.value = 0;
         liveResultsSection.style.display = 'none';
         liveGeneratorInfoEl.textContent = '';
         await yieldToEventLoop(20);
 
-        const cidrLines = hardcodedCidrList; // Uses the list defined/loaded at the top
+        const cidrLines = hardcodedCidrList; 
         if (!cidrLines || cidrLines.length === 0) {
-            statusDiv.textContent = '错误：IP列表为空。请检查 ipv4.txt 或内置列表。';
+            statusDiv.textContent = '错误：IP列表为空。';
             return;
         }
         statusDiv.textContent = `找到 ${cidrLines.length} 个CIDR条目。开始扩展...`;
@@ -364,14 +369,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error(`处理CIDR '${cidr}' 时出错:`, e);
             }
             processedCidrCount++;
-            if (processedCidrCount % 10 === 0 || allExpandedIps.length - lastExpandedCount > 2000 || i === cidrLines.length - 1) {
+            if (processedCidrCount % 10 === 0 || allExpandedIps.length - lastExpandedCount > 1000 || i === cidrLines.length - 1) { // Reduced expansion reporting threshold
                 statusDiv.textContent = `扩展IP: ${processedCidrCount}/${cidrLines.length} (${allExpandedIps.length} IP)`;
                 lastExpandedCount = allExpandedIps.length;
                 await yieldToEventLoop();
             }
         }
 
-        statusDiv.textContent = `所有 ${cidrLines.length} 个IP段解析完成。共扩展出 ${allExpandedIps.length} 个IP。正在去重...`;
+        statusDiv.textContent = `共扩展出 ${allExpandedIps.length} 个IP。正在去重...`;
         await yieldToEventLoop(20);
         if (allExpandedIps.length === 0) {
             statusDiv.textContent = '未能扩展出任何IP。';
@@ -380,7 +385,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         allExpandedIps = [...new Set(allExpandedIps)];
         const totalUniqueIps = allExpandedIps.length;
-        statusDiv.textContent = `去重后得到 ${totalUniqueIps} 个独立IP地址。准备抽样...`;
+        statusDiv.textContent = `去重后得到 ${totalUniqueIps} 个独立IP。准备抽样 ${SAMPLE_SIZE} 个...`;
         await yieldToEventLoop(50);
 
         if (totalUniqueIps === 0) {
@@ -393,10 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             statusDiv.textContent = '无IP可供抽样。';
             return;
         }
-
-        statusDiv.textContent = `从 ${totalUniqueIps} 个IP中随机抽取 ${currentSampleSize} 个进行测试...`;
-        await yieldToEventLoop(50);
-
+        
         let ipsToTest = getRandomSample(allExpandedIps, currentSampleSize);
 
         if (!ipsToTest || ipsToTest.length === 0) {
@@ -404,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        statusDiv.textContent = `测试 ${ipsToTest.length} 个IP (HTTP:${PORT_TO_TEST_ACTUAL}端口)...`;
+        statusDiv.textContent = `测试 ${ipsToTest.length} 个IP (HTTPS:${PORT_TO_TEST_ACTUAL}端口)...`;
         progressBar.max = ipsToTest.length;
         progressBar.value = 0;
         await yieldToEventLoop();
@@ -424,10 +426,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
                 testedCount++;
                 progressBar.value = testedCount;
+                // Update status more frequently for user feedback
                 if (testedCount % Math.max(1, Math.floor(CONCURRENT_LIMIT / 2)) === 0 || testedCount === ipsToTest.length) {
                     let rttDisp = (result.rtt === Infinity || typeof result.rtt !== 'number') ? (result.error || '错误') : result.rtt + 'ms';
                     statusDiv.textContent = `测试 (${testedCount}/${ipsToTest.length}): ${ip} - ${rttDisp}`;
-                    if (testedCount % (CONCURRENT_LIMIT * 2) === 0) await yieldToEventLoop();
+                     if (testedCount % (CONCURRENT_LIMIT * 3) === 0) await yieldToEventLoop(10); // Shorter yield for responsiveness
                 }
             }
         }
@@ -441,7 +444,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (topResults.length > 0) {
             statusDiv.textContent = `获取 ${topResults.length} 个IP的归属地 (仅国家)...`;
             liveResultsSection.style.display = 'block';
-            // Display initial results without location
             displayResults(topResults.map(r => ({ ...r, location: '查询中...' })));
             await yieldToEventLoop();
 
@@ -449,18 +451,41 @@ document.addEventListener('DOMContentLoaded', async () => {
                 topResults[i].location = await getGeoLocation(topResults[i].ip);
                 displayResults(topResults); 
                 statusDiv.textContent = `查询归属地: ${topResults[i].ip} - ${topResults[i].location} (${i+1}/${topResults.length})`;
-                if (i < topResults.length -1) { // Avoid delay after last IP
-                    await yieldToEventLoop(250); // Slightly reduced delay
+                if (i < topResults.length -1) { 
+                    await yieldToEventLoop(300); // Increased delay for Geo API
                 }
             }
             statusDiv.textContent = `优选完成！${topResults.length} 个结果已显示。`;
         } else {
-            statusDiv.textContent = '测试完成，未找到成功连接的IP。纯浏览器测试受CORS限制，成功率可能较低。';
+            statusDiv.textContent = '测试完成，未找到成功连接的IP。纯浏览器测试受CORS/SSL限制，成功率可能较低。';
             liveResultsSection.style.display = 'none';
         }
     }
 
+    // Initial status update
     statusDiv.textContent = "页面加载完成，初始化...";
+    
+    // Logic to load ipv4.txt if uncommented
+    const loadIpList = async () => {
+        // This is where you would uncomment and place the ipv4.txt loading logic
+        // For example:
+        // try {
+        //     const response = await fetch('ipv4.txt');
+        //     if (response.ok) {
+        //         const text = await response.text();
+        //         const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+        //         if (lines.length > 0) hardcodedCidrList = lines;
+        //         else console.warn('ipv4.txt is empty or malformed, using fallback.');
+        //     } else {
+        //         console.warn('Failed to load ipv4.txt, using fallback.');
+        //     }
+        // } catch (e) {
+        //     console.warn('Error loading ipv4.txt, using fallback:', e);
+        // }
+    };
+
+    await loadIpList(); // Call it if you enable ipv4.txt loading
+
     await yieldToEventLoop(100);
     statusDiv.textContent = "准备就绪，即将开始...";
     await yieldToEventLoop(100);
